@@ -36,6 +36,12 @@ def login():
     user = User.query.filter_by(email=data.get('email')).first()
     
     if user and check_password_hash(user.password, data.get('password')):
+        if user.is_blacklisted:
+            return jsonify({"error": "Your account has been blacklisted by the Admin."}), 403
+        
         access_token = create_access_token(identity={"id": user.id, "role": user.role})
         return jsonify({"message": "Login successful!", "token": access_token, "role": user.role}), 200
     return jsonify({"error": "Wrong email or password!"}), 401
+
+
+        
