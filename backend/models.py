@@ -35,6 +35,11 @@ class Drive(db.Model):
     package = db.Column(db.String(50), nullable=False)
     eligibility_cgpa = db.Column(db.Float, nullable=False)
     status = db.Column(db.String(20), default='pending')
+    skills = db.Column(db.String(255), nullable=True) # e.g., "Python, VueJS"
+    experience = db.Column(db.String(50), nullable=True) # e.g., "Fresher" or "1-2 Years"
+    benefits = db.Column(db.String(255), nullable=True) # e.g., "Health Insurance"
+    deadline = db.Column(db.DateTime, nullable=True) # When the job expires
+    is_closed = db.Column(db.Boolean, default=False)
     applications = db.relationship('Application', backref='drive', lazy=True)
 
 class Application(db.Model):
@@ -43,3 +48,5 @@ class Application(db.Model):
     drive_id = db.Column(db.Integer, db.ForeignKey('drive.id'), nullable=False)
     status = db.Column(db.String(20), default='applied')
     applied_on = db.Column(db.DateTime, default=datetime.utcnow)
+    feedback = db.Column(db.String(255), nullable=True) # "feedback for students [resume, missing skills]."
+    interview_date = db.Column(db.DateTime, nullable=True)
