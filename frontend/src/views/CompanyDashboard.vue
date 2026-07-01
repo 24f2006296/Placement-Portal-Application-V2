@@ -83,35 +83,34 @@
                   <p v-if="app.feedback" class="mb-0 text-warning small">Feedback: {{ app.feedback }}</p>
                 </div>
                 
-                <!-- Action Buttons (Only if not already selected/rejected) -->
-                <div v-if="app.status === 'applied' || app.status === 'shortlisted'" class="text-end">
+                
+                <!-- Action Buttons (Only show if not rejected or placed) -->
+                <div v-if="app.status !== 'rejected' && app.status !== 'placed'" class="text-end">
                   
-                  <!-- Default Action Buttons -->
-                  <div v-if="activeActionAppId !== app.application_id" class="d-flex flex-column gap-2">
+                  <div v-if="activeActionAppId !== app.application_id" class="d-flex flex-wrap gap-2 justify-content-end">
                     <button v-if="app.status === 'applied'" @click="openActionPanel(app.application_id, 'shortlisted')" class="btn btn-warning btn-sm">Shortlist</button>
-                    <button @click="updateStatus(app.application_id, 'selected')" class="btn btn-success btn-sm">Select</button>
+                    <button v-if="app.status === 'shortlisted'" @click="openActionPanel(app.application_id, 'interview')" class="btn btn-info btn-sm">Schedule Interview</button>
+                    <button v-if="app.status === 'interview'" @click="openActionPanel(app.application_id, 'offer')" class="btn btn-primary btn-sm">Send Offer</button>
+                    <button v-if="app.status === 'offer'" @click="updateStatus(app.application_id, 'placed')" class="btn btn-success btn-sm">Mark Placed</button>
+                    
                     <button @click="openActionPanel(app.application_id, 'rejected')" class="btn btn-danger btn-sm">Reject</button>
                   </div>
 
-                  <!-- The Smart Inline Action Panel (Revealed when clicked) -->
-                  <div v-if="activeActionAppId === app.application_id" class="glass-card p-2 mt-2" style="background: rgba(0,0,0,0.4);">
-                    
-                    <div v-if="pendingAction === 'shortlisted'">
+                  <!-- The Smart Inline Action Panel -->
+                  <div v-if="activeActionAppId === app.application_id" class="glass-card p-2 mt-2 text-start" style="background: rgba(0,0,0,0.4);">
+                    <div v-if="pendingAction === 'shortlisted' || pendingAction === 'interview'">
                       <label class="small text-muted">Schedule Interview</label>
                       <input type="datetime-local" class="form-control form-control-sm mb-2" v-model="actionData.interview_date">
                     </div>
-                    
                     <div v-if="pendingAction === 'rejected'">
                       <label class="small text-muted">Rejection Feedback</label>
                       <input type="text" class="form-control form-control-sm mb-2" placeholder="Reason..." v-model="actionData.feedback">
                     </div>
-
                     <div class="d-flex gap-1">
                       <button @click="submitAction(app.application_id)" class="btn btn-success btn-sm w-50">Confirm</button>
                       <button @click="cancelAction" class="btn btn-secondary btn-sm w-50">Cancel</button>
                     </div>
                   </div>
-
                 </div>
               </div>
             </div>

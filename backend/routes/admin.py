@@ -110,6 +110,40 @@ def handle_company(company_id, action):
     db.session.commit()
     return jsonify({"message": f"Company {company.status}!"}), 200
 
+
+# View a student's full profile and application history
+@admin_bp.route('/students/<int:student_id>/history', methods=['GET'])
+@admin_required()
+def get_student_history(student_id):
+    student = Student.query.get(student_id)
+    if not student:
+        return jsonify({"error": "Student not found!"}), 404
+        
+    # Get all applications for this student
+    applications = Application.query.filter_by(student_id=student.id).all()
+    
+    app_history = []
+    for app in applications:
+        app_history.append({
+            "job_title": app.drive.title,
+            "company_name": app.drive.company.company_name,
+            "status": app.status,
+            "applied_on": app.applied_on.strftime('%Y-%m-%d'),
+            "interview_date": app.interview_date.strftime('%Y-%m-%d %H:%M') if app.interview_date else None,
+            "feedback": app.feedback
+        })
+        
+    return jsonify({
+        "profile": {
+            "name": student.name,
+            "cgpa": student.cgpa,
+            "skills": student.skills,
+            "resume_link": student.resume_link
+        },
+        "applications": app_history
+    }), 200
+
+
 @admin_bp.route('/drives/pending', methods=['GET'])
 @admin_required()
 def get_pending_drives():

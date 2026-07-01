@@ -106,7 +106,10 @@ def get_drive_applications(drive_id):
 @company_bp.route('/applications/<int:application_id>/<string:action>', methods=['PUT'])
 @company_required()
 def update_application_status(application_id, action):
-    if action not in ['shortlisted', 'rejected', 'selected']:
+    # --- UPDATED TO MATCH YOUR EXACT REQUIREMENTS ---
+    allowed_actions = ['shortlisted', 'interview', 'offer', 'rejected', 'placed']
+    
+    if action not in allowed_actions:
         return jsonify({"error": "Invalid action!"}), 400
         
     company = Company.query.filter_by(user_id=get_jwt_identity()['id']).first()
@@ -115,22 +118,18 @@ def update_application_status(application_id, action):
     if not application or application.drive.company_id != company.id:
         return jsonify({"error": "Not allowed!"}), 403
         
-    # Get the optional JSON data sent from the frontend
-    # If no JSON is sent, we use an empty dictionary {}
     data = request.get_json(silent=True) or {}
-    
     application.status = action
     
-    # Save feedback if provided
     if data.get('feedback'):
         application.feedback = data.get('feedback')
         
-    # Save interview date if shortlisted
-    if action == 'shortlisted' and data.get('interview_date'):
+    # We can schedule an interview during the 'shortlisted' or 'interview' phase
+    if action in ['shortlisted', 'interview'] and data.get('interview_date'):
         try:
             application.interview_date = datetime.strptime(data.get('interview_date'), '%Y-%m-%dT%H:%M')
         except ValueError:
             return jsonify({"error": "Invalid interview date format!"}), 400
             
     db.session.commit()
-    return jsonify({"message": f"Student has been successfully {action}!"}), 200
+    return jsonify({"message": f"Student has been successfully updated to {action}!"}), 200

@@ -61,7 +61,7 @@
         </div>
       </div>
 
-      <!-- Search Students -->
+      <!-- Search Students (UPGRADED WITH VIEW HISTORY BUTTON) -->
       <div class="col-md-6 mb-4">
         <div class="glass-card h-100">
           <h4 class="mb-3 text-white">Manage Students</h4>
@@ -78,9 +78,14 @@
                 {{ student.is_blacklisted ? 'BLACKLISTED' : 'Active' }}
               </small>
             </div>
-            <button @click="toggleBlacklist(student.user_id)" :class="student.is_blacklisted ? 'btn btn-sm btn-success' : 'btn btn-sm btn-danger'">
-              {{ student.is_blacklisted ? 'Restore' : 'Blacklist' }}
-            </button>
+            <div>
+              <!-- NEW: View History Button -->
+              <button @click="viewStudentHistory(student.id)" class="btn btn-sm btn-info me-2">History</button>
+              
+              <button @click="toggleBlacklist(student.user_id)" :class="student.is_blacklisted ? 'btn btn-sm btn-success' : 'btn btn-sm btn-danger'">
+                {{ student.is_blacklisted ? 'Restore' : 'Blacklist' }}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -136,6 +141,56 @@
       </div>
     </div>
 
+
+    <!-- ========================================== -->
+    <!-- NEW: STUDENT HISTORY MODAL OVERLAY -->
+    <!-- ========================================== -->
+    <div v-if="showHistoryModal && selectedStudentHistory" class="custom-modal-overlay d-flex justify-content-center align-items-center">
+      <div class="glass-card w-100 m-3" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
+        
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h3 class="text-white mb-0">Student Profile & History</h3>
+          <button @click="closeHistoryModal" class="btn btn-outline-light btn-sm">Close</button>
+        </div>
+
+        <!-- Student Profile Information -->
+        <div class="row mb-4">
+          <div class="col-md-6">
+            <p class="mb-1"><i class="text-muted">Name:</i> <strong>{{ selectedStudentHistory.profile.name }}</strong></p>
+            <p class="mb-1"><i class="text-muted">CGPA:</i> <strong>{{ selectedStudentHistory.profile.cgpa }}</strong></p>
+            <p class="mb-1"><i class="text-muted">Contact:</i> {{ selectedStudentHistory.profile.contact || 'N/A' }}</p>
+          </div>
+          <div class="col-md-6">
+            <p class="mb-1"><i class="text-muted">Skills:</i> {{ selectedStudentHistory.profile.skills || 'N/A' }}</p>
+            <a v-if="selectedStudentHistory.profile.resume_link" :href="selectedStudentHistory.profile.resume_link" target="_blank" class="badge bg-primary text-decoration-none mt-2">View Resume</a>
+          </div>
+        </div>
+
+        <!-- Application History List -->
+        <h5 class="text-info mb-3">Application History</h5>
+        <div v-if="selectedStudentHistory.applications.length === 0" class="text-muted">
+          This student has not applied to any jobs yet.
+        </div>
+        
+        <div v-for="(app, index) in selectedStudentHistory.applications" :key="'history-'+index" class="glass-card mb-3 p-3" style="background: rgba(0,0,0,0.3);">
+          <div class="d-flex justify-content-between">
+            <h5 class="mb-1">{{ app.job_title }}</h5>
+            <span class="badge" :class="app.status === 'placed' ? 'bg-success' : (app.status === 'rejected' ? 'bg-danger' : 'bg-info')">
+              {{ app.status.toUpperCase() }}
+            </span>
+          </div>
+          <h6 class="text-warning mb-2">{{ app.company_name }}</h6>
+          
+          <div class="small">
+            <p class="mb-1 text-muted">Applied on: {{ app.applied_on }}</p>
+            <p v-if="app.interview_date" class="mb-1 text-primary">Interview: {{ app.interview_date }}</p>
+            <p v-if="app.feedback" class="mb-0 text-white">Feedback: {{ app.feedback }}</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -153,17 +208,20 @@ export default {
       searchStudentsList: [],
       companies: [],
       pendingDrives: [],
-      approvedDrives: []
+      approvedDrives: [],
+      
+      // NEW: Modal State
+      showHistoryModal: false,
+      selectedStudentHistory: null
     }
   },
   async mounted() {
     await this.fetchStats();
-    await this.searchCompanies(); // Fetch all companies initially
-    await this.searchStudents();  // Fetch all students initially
-    await this.fetchData();       // Fetch pending stuff
+    await this.searchCompanies(); 
+    await this.searchStudents();  
+    await this.fetchData();       
   },
   methods: {
-    // 1. Fetch Top Stats
     async fetchStats() {
       try {
         const response = await api.get('/admin/stats');
@@ -171,7 +229,6 @@ export default {
       } catch (error) { console.error("Failed to fetch stats", error); }
     },
 
-    // 2. Fetch Pending/Approved data
     async fetchData() {
       try {
         this.companies = (await api.get('/admin/companies/pending')).data;
@@ -180,7 +237,6 @@ export default {
       } catch (error) { console.error("Failed to fetch approvals data", error); }
     },
     
-    // 3. Search Companies
     async searchCompanies() {
       try {
         const response = await api.get(`/admin/companies/search?q=${this.companySearchQuery}`);
@@ -188,7 +244,6 @@ export default {
       } catch (error) { console.error("Search failed", error); }
     },
 
-    // 4. Search Students
     async searchStudents() {
       try {
         const response = await api.get(`/admin/students/search?q=${this.studentSearchQuery}`);
@@ -196,29 +251,41 @@ export default {
       } catch (error) { console.error("Search failed", error); }
     },
 
-    // 5. Toggle Blacklist (Works for both!)
     async toggleBlacklist(userId) {
       try {
         await api.put(`/admin/users/${userId}/blacklist`);
-        // Refresh both lists to show the updated status
         await this.searchCompanies();
         await this.searchStudents();
       } catch (error) { alert("Failed to change blacklist status."); }
     },
 
-    // 6. Handle Approvals
+    //View Student History 
+    async viewStudentHistory(studentId) {
+      try {
+        const response = await api.get(`/admin/students/${studentId}/history`);
+        this.selectedStudentHistory = response.data;
+        this.showHistoryModal = true; // Opens the modal!
+      } catch (error) {
+        alert("Failed to fetch student history.");
+      }
+    },
+
+    closeHistoryModal() {
+      this.showHistoryModal = false;
+      this.selectedStudentHistory = null;
+    },
+
     async handleCompany(id, action) { 
       await api.put(`/admin/companies/${id}/${action}`); 
       this.fetchData(); 
-      this.searchCompanies(); // Update search list too!
+      this.searchCompanies(); 
     },
     async handleDrive(id, action) { 
       await api.put(`/admin/drives/${id}/${action}`); 
       this.fetchData(); 
-      this.fetchStats(); // Update stats!
+      this.fetchStats(); 
     },
 
-    // 7. CSV Export
     async triggerCSVExport(driveId) {
       const response = await api.post(`/admin/drives/${driveId}/export`);
       alert(`Success! Task ID: ${response.data.task_id}`);
@@ -228,3 +295,17 @@ export default {
   }
 }
 </script>
+
+<!-- CSS for the Custom Modal Overlay -->
+<style scoped>
+.custom-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7); /* Dark semi-transparent background */
+  z-index: 9999; /* Ensures it sits on top of EVERYTHING */
+  backdrop-filter: blur(5px); /* Adds a nice blur to the background */
+}
+</style>
