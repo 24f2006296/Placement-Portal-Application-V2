@@ -3,6 +3,7 @@ from models import db, Company, Drive
 from utils import admin_required
 from tasks import export_applications_csv
 from models import db, Company, Drive, Student, Application, User
+from cache import cache
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -26,6 +27,7 @@ def get_dashboard_stats():
 # Search Companies 
 @admin_bp.route('/companies/search', methods=['GET'])
 @admin_required()
+@cache.cached(timeout=120, query_string=True) # Expiry Policy: 120 seconds
 def search_companies():
     # Grab the search query from the URL (default is empty string)
     search_query = request.args.get('q', '') 
@@ -54,6 +56,7 @@ def search_companies():
 # Search Students (by name)
 @admin_bp.route('/students/search', methods=['GET'])
 @admin_required()
+@cache.cached(timeout=120, query_string=True) # Expiry Policy: 120 seconds
 def search_students():
     search_query = request.args.get('q', '')
     
@@ -88,6 +91,9 @@ def toggle_blacklist(user_id):
     # Flip the switch! If it's True, make it False. If it's False, make it True.
     user.is_blacklisted = not user.is_blacklisted
     db.session.commit()
+
+    # REFRESH POLICY: Clear the Redis cache instantly so searches reflect the ban!
+    cache.clear()
     
     action = "Blacklisted" if user.is_blacklisted else "Un-blacklisted"
     return jsonify({"message": f"User successfully {action}!"}), 200
@@ -166,6 +172,8 @@ def handle_drive(drive_id, action):
         return jsonify({"error": "Invalid request!"}), 400
     drive.status = 'approved' if action == 'approve' else 'rejected'
     db.session.commit()
+    # REFRESH POLICY: Clear the cache so students can see the newly approved job!
+    cache.clear()
     return jsonify({"message": f"Drive {drive.status}!"}), 200
 
 @admin_bp.route('/drives/<int:drive_id>/export', methods=['POST'])

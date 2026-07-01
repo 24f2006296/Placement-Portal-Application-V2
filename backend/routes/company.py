@@ -5,6 +5,7 @@ from models import db, Company, Drive, Application
 from utils import company_required
 from datetime import datetime
 from tasks import export_company_csv, celery
+from cache import cache
 
 company_bp = Blueprint('company', __name__)
 
@@ -75,6 +76,9 @@ def close_drive(drive_id):
         
     drive.is_closed = True
     db.session.commit()
+    # REFRESH POLICY: Instantly wipe the cache so students don't see this closed job!
+    cache.clear()
+
     return jsonify({"message": "Job posting has been closed!"}), 200
 
 

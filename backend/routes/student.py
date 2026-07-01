@@ -6,6 +6,7 @@ from models import db, Student, Drive, Application
 from utils import student_required
 from datetime import datetime # <-- Needed to check deadlines!
 from tasks import export_student_csv, celery
+from cache import cache
 
 student_bp = Blueprint('student', __name__)
 
@@ -45,6 +46,7 @@ def handle_profile():
 #  Smart Job Board (Hides closed/expired & Allows Search) ---
 @student_bp.route('/drives', methods=['GET'])
 @student_required()
+@cache.cached(timeout=120, query_string=True) # Expiry Policy: 120 seconds
 def get_available_drives():
     # 1. Grab the search word if they typed one
     search_query = request.args.get('q', '')
