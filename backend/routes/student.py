@@ -1,0 +1,135 @@
+
+
+from flask import Blueprint, jsonify, request
+from flask_jwt_extended import get_jwt_identity
+from models import db, Student, Drive, Application
+from utils import student_required
+from datetime import datetime # <-- Needed to check deadlines!
+
+student_bp = Blueprint('student', __name__)
+
+#  View & Update Student Profile ---
+@student_bp.route('/profile', methods=['GET', 'PUT'])
+@student_required()
+def handle_profile():
+    student = Student.query.filter_by(user_id=get_jwt_identity()['id']).first()
+    if not student:
+        return jsonify({"error": "Profile not found!"}), 404
+
+    if request.method == 'GET':
+        return jsonify({
+            "name": student.name,
+            "cgpa": student.cgpa,
+            "contact": student.contact,
+            "education": student.education,
+            "skills": student.skills,
+            "experience": student.experience,
+            "resume_link": student.resume_link
+        }), 200
+
+    # If PUT request (Updating profile)
+    data = request.get_json()
+    student.name = data.get('name', student.name)
+    student.cgpa = data.get('cgpa', student.cgpa)
+    student.contact = data.get('contact', student.contact)
+    student.education = data.get('education', student.education)
+    student.skills = data.get('skills', student.skills)
+    student.experience = data.get('experience', student.experience)
+    student.resume_link = data.get('resume_link', student.resume_link)
+    
+    db.session.commit()
+    return jsonify({"message": "Profile updated successfully!"}), 200
+
+
+#  Smart Job Board (Hides closed/expired & Allows Search) ---
+@student_bp.route('/drives', methods=['GET'])
+@student_required()
+def get_available_drives():
+    # 1. Grab the search word if they typed one
+    search_query = request.args.get('q', '')
+    
+    # 2. Base filter: Must be approved and NOT manually closed by the company
+    query = Drive.query.filter_by(status='approved', is_closed=False)
+    
+    # 3. Search filter: By Title, Skills, or Company Name
+    if search_query:
+        # To search by company name, we have to join the Company table
+        from models import Company 
+        query = query.join(Company).filter(
+            db.or_(
+                Drive.title.ilike(f'%{search_query}%'),
+                Drive.skills.ilike(f'%{search_query}%'),
+                Company.company_name.ilike(f'%{search_query}%')
+            )
+        )
+        
+    drives = query.all()
+    current_time = datetime.utcnow()
+    
+    drives_list = []
+    for drive in drives:
+        # 4. TIME CHECK: If there is a deadline AND it has already passed, skip this job!
+        if drive.deadline and drive.deadline < current_time:
+            continue
+            
+        drives_list.append({
+            "id": drive.id,
+            "company_name": drive.company.company_name,
+            "title": drive.title,
+            "package": drive.package,
+            "eligibility_cgpa": drive.eligibility_cgpa,
+            "skills": drive.skills,
+            "experience": drive.experience,
+            "benefits": drive.benefits,
+            "deadline": drive.deadline.strftime('%Y-%m-%d %H:%M') if drive.deadline else None
+        })
+        
+    return jsonify(drives_list), 200
+
+
+# Apply for Job ---
+@student_bp.route('/drives/<int:drive_id>/apply', methods=['POST'])
+@student_required()
+def apply_for_job(drive_id):
+    student = Student.query.filter_by(user_id=get_jwt_identity()['id']).first()
+    drive = Drive.query.get(drive_id)
+    
+    # Extra security: Ensure job isn't closed or expired right when they click apply!
+    if not drive or drive.status != 'approved' or drive.is_closed:
+        return jsonify({"error": "Drive is not available!"}), 404
+    if drive.deadline and drive.deadline < datetime.utcnow():
+        return jsonify({"error": "The deadline for this job has passed!"}), 400
+        
+    if student.cgpa < drive.eligibility_cgpa:
+        return jsonify({"error": "Your CGPA is too low to apply."}), 400
+        
+    if Application.query.filter_by(student_id=student.id, drive_id=drive.id).first():
+        return jsonify({"error": "You have already applied!"}), 400
+        
+    new_application = Application(student_id=student.id, drive_id=drive.id, status='applied')
+    db.session.add(new_application)
+    db.session.commit()
+    return jsonify({"message": "Successfully applied for the job!"}), 201
+
+
+# --- Route 4: My Application History (Track Status) ---
+@student_bp.route('/applications', methods=['GET'])
+@student_required()
+def get_my_applications():
+    student = Student.query.filter_by(user_id=get_jwt_identity()['id']).first()
+    applications = Application.query.filter_by(student_id=student.id).all()
+    
+    app_list = []
+    for app in applications:
+        app_list.append({
+            "application_id": app.id,
+            "company_name": app.drive.company.company_name,
+            "job_title": app.drive.title,
+            "status": app.status,
+            "applied_on": app.applied_on.strftime('%Y-%m-%d'),
+            "feedback": app.feedback,
+            "interview_date": app.interview_date.strftime('%Y-%m-%d %H:%M') if app.interview_date else None,
+            "offer_letter": app.offer_letter
+        })
+        
+    return jsonify(app_list), 200

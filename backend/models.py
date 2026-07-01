@@ -18,6 +18,9 @@ class Student(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     name = db.Column(db.String(100), nullable=False)
     cgpa = db.Column(db.Float, nullable=False)
+    education = db.Column(db.String(255), nullable=True) 
+    skills = db.Column(db.String(255), nullable=True) 
+    experience = db.Column(db.String(255), nullable=True) 
     resume_link = db.Column(db.String(255), nullable=True)
     applications = db.relationship('Application', backref='student', lazy=True)
 
@@ -50,3 +53,4 @@ class Application(db.Model):
     applied_on = db.Column(db.DateTime, default=datetime.utcnow)
     feedback = db.Column(db.String(255), nullable=True) # "feedback for students [resume, missing skills]."
     interview_date = db.Column(db.DateTime, nullable=True)
+    offer_letter = db.Column(db.String(255), nullable=True)
