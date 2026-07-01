@@ -34,6 +34,7 @@
         <!-- List of Created Drives -->
         <div class="glass-card h-100">
           <h4 class="mb-3 text-white">My Drives</h4>
+          <button @click="triggerExport" class="btn btn-outline-info btn-sm">Export to CSV</button>
           <div v-if="drives.length === 0" class="text-muted">No drives posted yet.</div>
           
           <div v-for="drive in drives" :key="drive.id" class="glass-card mb-3 p-3">
@@ -83,7 +84,7 @@
                   <p v-if="app.feedback" class="mb-0 text-warning small">Feedback: {{ app.feedback }}</p>
                 </div>
                 
-                
+
                 <!-- Action Buttons (Only show if not rejected or placed) -->
                 <div v-if="app.status !== 'rejected' && app.status !== 'placed'" class="text-end">
                   
@@ -198,6 +199,27 @@ export default {
     cancelAction() {
       this.activeActionAppId = null;
       this.pendingAction = '';
+    },
+
+    async triggerExport() {
+      try {
+        // 1. Tell Celery to start the job
+        const res = await api.post('/company/export');
+        const taskId = res.data.task_id;
+        alert("Batch job started! You can continue using the dashboard. We will notify you when it's done.");
+
+        // 2. Secretly check the status every 3 seconds
+        const interval = setInterval(async () => {
+          const statusRes = await api.get(`/company/export/status/${taskId}`);
+          
+          if (statusRes.data.status === 'Completed') {
+            clearInterval(interval); // Stop checking
+            alert(`Batch Job Complete! Your CSV is ready and saved at: ${statusRes.data.file}`);
+          }
+        }, 3000);
+      } catch (error) {
+        alert("Failed to start export.");
+      }
     },
 
     // Submits the data from the Smart Action Panel

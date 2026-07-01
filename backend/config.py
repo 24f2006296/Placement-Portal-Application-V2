@@ -7,8 +7,15 @@ class Config:
     # Celery & Redis Setup
     CELERY_BROKER_URL = "redis://localhost:6379/1"
     CELERY_RESULT_BACKEND = "redis://localhost:6379/2"
+    CELERY_TIMEZONE = 'Asia/Kolkata' # Ensure Beat runs on Indian Standard Time
     
     # Caching Setup
     CACHE_TYPE = "RedisCache"
     CACHE_REDIS_URL = "redis://localhost:6379/3"
     CACHE_DEFAULT_TIMEOUT = 60
+
+    # Email Setup (For testing, we will print emails to terminal if credentials aren't set)
+    SMTP_SERVER = "smtp.gmail.com"
+    SMTP_PORT = 587
+    SENDER_EMAIL = "your_email@gmail.com"
+    SENDER_PASSWORD = "your_app_password"

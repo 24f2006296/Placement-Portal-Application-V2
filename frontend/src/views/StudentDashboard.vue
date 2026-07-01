@@ -62,7 +62,11 @@
 
     <div v-if="activeTab === 'applications'">
       <div class="glass-card">
-        <h4 class="mb-4 text-white">Application History</h4>
+        <!--<h4 class="mb-4 text-white">Application History</h4>-->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h4 class="text-white mb-0">Application History</h4>
+          <button @click="triggerExport" class="btn btn-outline-info btn-sm">Export to CSV</button>
+        </div>
         
         <div v-if="applications.length === 0" class="text-center text-muted py-4">
           You haven't applied to any jobs yet!
@@ -223,11 +227,32 @@ export default {
       }
     },
 
+    async triggerExport() {
+      try {
+        // 1. Tell Celery to start the job
+        const res = await api.post('/student/export');
+        const taskId = res.data.task_id;
+        alert("Batch job started! You can continue using the dashboard. We will notify you when it's done.");
+
+        // 2. Secretly check the status every 3 seconds
+        const interval = setInterval(async () => {
+          const statusRes = await api.get(`/student/export/status/${taskId}`);
+          
+          if (statusRes.data.status === 'Completed') {
+            clearInterval(interval); // Stop checking
+            alert(`Batch Job Complete! Your CSV is ready and saved at: ${statusRes.data.file}`);
+          }
+        }, 3000);
+      } catch (error) {
+        alert("Failed to start export.");
+      }
+    },
+
     async applyForJob(id) {
       try {
         await api.post(`/student/drives/${id}/apply`);
         alert("Success! Applied for the job.");
-        // Refresh the applications list so it shows up in Tab 2 instantly!
+        // Refresh the applications list so it shows up in TAB "MY APPLICATIONS" instantly!
         await this.fetchApplications();
       } catch (error) {
         alert("Oops! " + (error.response?.data?.error || "Failed to apply."));

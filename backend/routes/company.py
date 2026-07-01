@@ -4,6 +4,7 @@ from flask_jwt_extended import get_jwt_identity
 from models import db, Company, Drive, Application
 from utils import company_required
 from datetime import datetime
+from tasks import export_company_csv, celery
 
 company_bp = Blueprint('company', __name__)
 
@@ -133,3 +134,20 @@ def update_application_status(application_id, action):
             
     db.session.commit()
     return jsonify({"message": f"Student has been successfully updated to {action}!"}), 200
+
+# Trigger Asynchronous CSV Export
+@company_bp.route('/export', methods=['POST'])
+@company_required()
+def trigger_export():
+    company = Company.query.filter_by(user_id=get_jwt_identity()['id']).first()
+    task = export_company_csv.delay(company.id)
+    return jsonify({"message": "Export started in the background!", "task_id": task.id}), 202
+
+# Check Task Status
+@company_bp.route('/export/status/<string:task_id>', methods=['GET'])
+@company_required()
+def check_export_status(task_id):
+    task = celery.AsyncResult(task_id)
+    if task.state == 'SUCCESS':
+        return jsonify({"status": "Completed", "file": task.result}), 200
+    return jsonify({"status": task.state}), 200

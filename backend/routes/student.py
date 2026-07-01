@@ -5,6 +5,7 @@ from flask_jwt_extended import get_jwt_identity
 from models import db, Student, Drive, Application
 from utils import student_required
 from datetime import datetime # <-- Needed to check deadlines!
+from tasks import export_student_csv, celery
 
 student_bp = Blueprint('student', __name__)
 
@@ -112,7 +113,7 @@ def apply_for_job(drive_id):
     return jsonify({"message": "Successfully applied for the job!"}), 201
 
 
-# --- Route 4: My Application History (Track Status) ---
+# My Application History (Track Status) ---
 @student_bp.route('/applications', methods=['GET'])
 @student_required()
 def get_my_applications():
@@ -133,3 +134,20 @@ def get_my_applications():
         })
         
     return jsonify(app_list), 200
+
+# Trigger Asynchronous CSV Export
+@student_bp.route('/export', methods=['POST'])
+@student_required()
+def trigger_export():
+    student = Student.query.filter_by(user_id=get_jwt_identity()['id']).first()
+    task = export_student_csv.delay(student.id)
+    return jsonify({"message": "Export started in the background!", "task_id": task.id}), 202
+
+# Check Task Status
+@student_bp.route('/export/status/<string:task_id>', methods=['GET'])
+@student_required()
+def check_export_status(task_id):
+    task = celery.AsyncResult(task_id)
+    if task.state == 'SUCCESS':
+        return jsonify({"status": "Completed", "file": task.result}), 200
+    return jsonify({"status": task.state}), 200
