@@ -4,17 +4,17 @@
     <!-- HEADER & NAVIGATION TABS -->
     <div class="d-flex justify-content-between align-items-center mb-4">
       <div>
-        <h2 class="text-white">Student Portal</h2>
+        <h2>Student Portal</h2>
         <p class="text-info">Welcome back, {{ profile.name }}</p>
       </div>
-      <button @click="logout" class="btn btn-outline-light">Logout</button>
+      <button @click="logout" class="btn btn-outline-light, btn btn-danger">Logout</button>
     </div>
 
     <!-- Tab Buttons -->
     <div class="d-flex gap-3 mb-4">
-      <button @click="activeTab = 'jobs'" :class="activeTab === 'jobs' ? 'btn-glass-primary' : 'btn-outline-light'" class="btn w-100 py-2">Job Board</button>
-      <button @click="activeTab = 'applications'" :class="activeTab === 'applications' ? 'btn-glass-primary' : 'btn-outline-light'" class="btn w-100 py-2">My Applications</button>
-      <button @click="activeTab = 'profile'" :class="activeTab === 'profile' ? 'btn-glass-primary' : 'btn-outline-light'" class="btn w-100 py-2">My Profile</button>
+      <button @click="activeTab = 'jobs'" :class="activeTab === 'jobs' ? 'btn-glass-primary' : 'btn-my-glass'" class="btn w-100 py-2">Job Board</button>
+      <button @click="activeTab = 'applications'" :class="activeTab === 'applications' ? 'btn-glass-primary' : 'btn-my-glass'" class="btn w-100 py-2">My Applications</button>
+      <button @click="activeTab = 'profile'" :class="activeTab === 'profile' ? 'btn-glass-primary' : 'btn-my-glass'" class="btn w-100 py-2">My Profile</button>
     </div>
 
 
@@ -37,7 +37,7 @@
         <div v-for="drive in drives" :key="'drive-'+drive.id" class="col-md-6 mb-4">
           <div class="glass-card h-100 d-flex flex-column">
             <div class="d-flex justify-content-between">
-              <h4 class="mb-1 text-white">{{ drive.title }}</h4>
+              <h4 class="mb-1">{{ drive.title }}</h4>
               <span class="text-success fw-bold">{{ drive.package }}</span>
             </div>
             <h6 class="text-warning mb-3">{{ drive.company_name }}</h6>
@@ -62,9 +62,8 @@
 
     <div v-if="activeTab === 'applications'">
       <div class="glass-card">
-        <!--<h4 class="mb-4 text-white">Application History</h4>-->
         <div class="d-flex justify-content-between align-items-center mb-4">
-          <h4 class="text-white mb-0">Application History</h4>
+          <h4 class="mb-0">Application History</h4>
           <button @click="triggerExport" class="btn btn-outline-info btn-sm">Export to CSV</button>
         </div>
         

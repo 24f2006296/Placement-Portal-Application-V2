@@ -5,7 +5,6 @@ from flask_jwt_extended import get_jwt_identity
 from models import db, Student, Drive, Application
 from utils import student_required
 from datetime import datetime # <-- Needed to check deadlines!
-from tasks import export_student_csv, celery
 from cache import cache
 
 student_bp = Blueprint('student', __name__)
@@ -14,7 +13,7 @@ student_bp = Blueprint('student', __name__)
 @student_bp.route('/profile', methods=['GET', 'PUT'])
 @student_required()
 def handle_profile():
-    student = Student.query.filter_by(user_id=get_jwt_identity()['id']).first()
+    student = Student.query.filter_by(user_id=get_jwt_identity()).first()
     if not student:
         return jsonify({"error": "Profile not found!"}), 404
 
@@ -22,7 +21,7 @@ def handle_profile():
         return jsonify({
             "name": student.name,
             "cgpa": student.cgpa,
-            "contact": student.contact,
+            #"contact": student.contact,
             "education": student.education,
             "skills": student.skills,
             "experience": student.experience,
@@ -33,7 +32,7 @@ def handle_profile():
     data = request.get_json()
     student.name = data.get('name', student.name)
     student.cgpa = data.get('cgpa', student.cgpa)
-    student.contact = data.get('contact', student.contact)
+    #student.contact = data.get('contact', student.contact)
     student.education = data.get('education', student.education)
     student.skills = data.get('skills', student.skills)
     student.experience = data.get('experience', student.experience)
@@ -94,7 +93,7 @@ def get_available_drives():
 @student_bp.route('/drives/<int:drive_id>/apply', methods=['POST'])
 @student_required()
 def apply_for_job(drive_id):
-    student = Student.query.filter_by(user_id=get_jwt_identity()['id']).first()
+    student = Student.query.filter_by(user_id=get_jwt_identity()).first()
     drive = Drive.query.get(drive_id)
     
     # Extra security: Ensure job isn't closed or expired right when they click apply!
@@ -119,7 +118,7 @@ def apply_for_job(drive_id):
 @student_bp.route('/applications', methods=['GET'])
 @student_required()
 def get_my_applications():
-    student = Student.query.filter_by(user_id=get_jwt_identity()['id']).first()
+    student = Student.query.filter_by(user_id=get_jwt_identity()).first()
     applications = Application.query.filter_by(student_id=student.id).all()
     
     app_list = []
@@ -141,7 +140,9 @@ def get_my_applications():
 @student_bp.route('/export', methods=['POST'])
 @student_required()
 def trigger_export():
-    student = Student.query.filter_by(user_id=get_jwt_identity()['id']).first()
+    from tasks import export_student_csv
+
+    student = Student.query.filter_by(user_id=get_jwt_identity()).first()
     task = export_student_csv.delay(student.id)
     return jsonify({"message": "Export started in the background!", "task_id": task.id}), 202
 
@@ -149,6 +150,8 @@ def trigger_export():
 @student_bp.route('/export/status/<string:task_id>', methods=['GET'])
 @student_required()
 def check_export_status(task_id):
+    from tasks import celery
+    
     task = celery.AsyncResult(task_id)
     if task.state == 'SUCCESS':
         return jsonify({"status": "Completed", "file": task.result}), 200

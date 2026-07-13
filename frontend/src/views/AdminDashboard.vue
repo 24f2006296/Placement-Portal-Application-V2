@@ -3,8 +3,8 @@
   <div class="container py-5">
     
     <div class="d-flex justify-content-between align-items-center mb-4">
-      <h2 class="text-white">Admin Command Center</h2>
-      <button @click="logout" class="btn btn-outline-light">Logout</button>
+      <h2>Admin Command Center</h2>
+      <button @click="logout" class="btn btn-outline-light, btn btn-danger">Logout</button>
     </div>
 
     <!-- SECTION 1: Statistics Cards -->
@@ -40,7 +40,7 @@
       <!-- Search Companies -->
       <div class="col-md-6 mb-4">
         <div class="glass-card h-100">
-          <h4 class="mb-3 text-white">Manage Companies</h4>
+          <h4 class="mb-3">Manage Companies</h4>
           
           <div class="input-group mb-4">
             <input type="text" class="form-control glass-input" placeholder="Search by name or industry..." v-model="companySearchQuery" @keyup.enter="searchCompanies">
@@ -64,7 +64,7 @@
       <!-- Search Students (UPGRADED WITH VIEW HISTORY BUTTON) -->
       <div class="col-md-6 mb-4">
         <div class="glass-card h-100">
-          <h4 class="mb-3 text-white">Manage Students</h4>
+          <h4 class="mb-3">Manage Students</h4>
           
           <div class="input-group mb-4">
             <input type="text" class="form-control glass-input" placeholder="Search by name or contact..." v-model="studentSearchQuery" @keyup.enter="searchStudents">
@@ -149,7 +149,7 @@
       <div class="glass-card w-100 m-3" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
         
         <div class="d-flex justify-content-between align-items-center mb-4">
-          <h3 class="text-white mb-0">Student Profile & History</h3>
+          <h3 class="mb-0">Student Profile & History</h3>
           <button @click="closeHistoryModal" class="btn btn-outline-light btn-sm">Close</button>
         </div>
 
@@ -184,7 +184,7 @@
           <div class="small">
             <p class="mb-1 text-muted">Applied on: {{ app.applied_on }}</p>
             <p v-if="app.interview_date" class="mb-1 text-primary">Interview: {{ app.interview_date }}</p>
-            <p v-if="app.feedback" class="mb-0 text-white">Feedback: {{ app.feedback }}</p>
+            <p v-if="app.feedback" class="mb-0">Feedback: {{ app.feedback }}</p>
           </div>
         </div>
 

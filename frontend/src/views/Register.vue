@@ -20,7 +20,7 @@
 
         <div class="mb-3">
           <label class="form-label">I am a...</label>
-          <select class="form-select glass-input text-white" v-model="form.role" style="background-color: #2c5364;" required>
+          <select class="form-select glass-input" v-model="form.role" style="background-color: #2c5364;" required>
             <option value="student">Student</option>
             <option value="company">Company</option>
           </select>

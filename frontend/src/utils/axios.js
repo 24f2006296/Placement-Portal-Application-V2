@@ -1,17 +1,18 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api'
+  baseURL: 'http://127.0.0.1:5000/api', 
 });
 
 api.interceptors.request.use(config => {
-  const token = localStorage.getItem('token');
-  if (token) {
+  // Look for the ticket under both common names!
+  const token = localStorage.getItem('token') || localStorage.getItem('access_token'); 
+  
+  // Make sure it is a REAL ticket, not just the word "undefined" or "null"
+  if (token && token !== 'undefined' && token !== 'null') {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
-}, error => {
-  return Promise.reject(error);
 });
 
 export default api;

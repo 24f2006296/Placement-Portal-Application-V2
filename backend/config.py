@@ -2,7 +2,7 @@ class Config:
     SECRET_KEY = "super-secret-key-for-mad2"
     SQLALCHEMY_DATABASE_URI = "sqlite:///database.sqlite3"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    JWT_SECRET_KEY = "jwt-super-secret-key"
+    JWT_SECRET_KEY = "this-is-a-super-secret-jwt-key-that-is-very-long"
     
     # Celery & Redis Setup
     CELERY_BROKER_URL = "redis://localhost:6379/1"

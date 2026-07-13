@@ -11,7 +11,6 @@ from email.mime.multipart import MIMEMultipart # for HTML emails
 flask_app = create_app()
 celery = make_celery(flask_app)
 
-# ... (Keep export_applications_csv and send_interview_reminders tasks here) ...
 
 # Monthly Report Task 
 @celery.task(name="tasks.send_monthly_reports")
@@ -125,6 +124,35 @@ def send_email(to_email, subject, body, is_html=False):
     except Exception as e:
         print(f"Failed to send email to {to_email}: {e}")
 
+# Interview Reminder Task ---
+@celery.task(name="tasks.send_interview_reminders")
+def send_interview_reminders():
+    print("Starting interview reminders...")
+    
+    applications = Application.query.all()
+    reminders_sent = 0
+    
+    for app in applications:
+        # Check : is he selected for interview? the date? 
+        if app.interview_date and app.status not in ['rejected', 'placed']:
+            
+            student = app.student
+            student_email = student.user.email
+            company_name = app.drive.company.company_name
+            job_title = app.drive.title
+            
+            interview_time = app.interview_date.strftime('%Y-%m-%d %H:%M')
+                
+            subject = f"Interview Reminder: {company_name} - {job_title}"
+            body = f"Hello {student.name},\n\nThis is a reminder for your upcoming interview with {company_name} for the '{job_title}' role.\n\nScheduled Time: {interview_time}\n\nBest of luck!\n- Placement Cell"
+            
+            # Mail [Mock mail]
+            send_email(student_email, subject, body, is_html=False)
+            reminders_sent += 1
+            
+    print(f"Finished sending {reminders_sent} interview reminders.")
+    return f"Sent {reminders_sent} reminders."
+
 # Student CSV Export Task ---
 @celery.task(name="tasks.export_student_csv")
 def export_student_csv(student_id):
@@ -164,4 +192,31 @@ def export_company_csv(company_id):
                 writer.writerow([drive.title, app.student.name, app.student.cgpa, applied, app.status])
                 
     print(f"Task Complete! Company CSV saved to {filepath}")
+    return filepath
+
+# Admin CSV Export 
+@celery.task(name="tasks.export_applications_csv")
+def export_applications_csv(drive_id):
+    drive = Drive.query.get(drive_id)
+    if not drive:
+        return "Drive not found"
+
+    applications = Application.query.filter_by(drive_id=drive.id).all()
+    
+
+    filename = f"admin_drive_{drive.id}_applications.csv"
+    filepath = os.path.join("downloads", filename)
+    os.makedirs("downloads", exist_ok=True)
+    
+    with open(filepath, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        # Heading 
+        writer.writerow(['Student Name', 'CGPA', 'Skills', 'Applied On', 'Status'])
+        
+        # every student data
+        for app in applications:
+            applied = app.applied_on.strftime('%Y-%m-%d')
+            writer.writerow([app.student.name, app.student.cgpa, app.student.skills, applied, app.status])
+            
+    print(f"Task Complete! Admin CSV saved to {filepath}")
     return filepath

@@ -9,7 +9,7 @@ def make_celery(app):
     )
     celery.conf.update(app.config)
 
-    celery.conf.beat_schedule = {
+    celery.conf.CELERYBEAT_SCHEDULE = {
         'daily-interview-reminders': {
             'task': 'tasks.send_interview_reminders',
             'schedule': crontab(hour=8, minute=0), 

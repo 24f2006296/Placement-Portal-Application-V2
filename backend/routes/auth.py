@@ -36,11 +36,22 @@ def login():
     user = User.query.filter_by(email=data.get('email')).first()
     
     if user and check_password_hash(user.password, data.get('password')):
+        # Blacklist Check
         if user.is_blacklisted:
             return jsonify({"error": "Your account has been blacklisted by the Admin."}), 403
         
-        access_token = create_access_token(identity={"id": user.id, "role": user.role})
+        # Company Approval Check!
+        if user.role == 'company':
+            from models import Company 
+            company = Company.query.filter_by(user_id=user.id).first()
+            if company and company.status != 'approved':
+                return jsonify({"error": "Login failed! Your account is pending Admin approval."}), 403
+        
+        
+        access_token = create_access_token(identity=str(user.id), additional_claims={"role": user.role})
+        
         return jsonify({"message": "Login successful!", "token": access_token, "role": user.role}), 200
+    
     return jsonify({"error": "Wrong email or password!"}), 401
 
 

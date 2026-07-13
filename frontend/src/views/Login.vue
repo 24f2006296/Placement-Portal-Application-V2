@@ -27,16 +27,30 @@ export default {
   methods: {
     async handleLogin() {
       try {
-        const response = await api.post('/auth/login', { email: this.email, password: this.password });
-        localStorage.setItem('token', response.data.token);
-        localStorage.setItem('role', response.data.role);
+        const response = await api.post('/auth/login', {
+          email: this.email,
+          password: this.password
+        });
         
-        const role = response.data.role;
-        if (role === 'admin') this.$router.push('/admin');
-        else if (role === 'company') this.$router.push('/company');
-        else if (role === 'student') this.$router.push('/student');
+        // Grab ONLY the clean ticket!
+        const cleanToken = response.data.token || response.data.access_token;
+        const userRole = response.data.role;
+
+        // Save the clean ticket to memory
+        localStorage.setItem('token', cleanToken);
+        localStorage.setItem('role', userRole);
+
+        // Send the user to the right page
+        if (userRole === 'admin') {
+          this.$router.push('/admin');
+        } else if (userRole === 'company') {
+          this.$router.push('/company');
+        } else {
+          this.$router.push('/student');
+        }
+
       } catch (error) {
-        alert("Login Failed!");
+        alert("Login failed! Check your email and password.");
       }
     }
   }

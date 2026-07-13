@@ -4,7 +4,7 @@ from flask_jwt_extended import get_jwt_identity
 from models import db, Company, Drive, Application
 from utils import company_required
 from datetime import datetime
-from tasks import export_company_csv, celery
+#from tasks import export_company_csv, celery
 from cache import cache
 
 company_bp = Blueprint('company', __name__)
@@ -14,7 +14,7 @@ company_bp = Blueprint('company', __name__)
 @company_required()
 def create_drive():
     data = request.get_json()
-    company = Company.query.filter_by(user_id=get_jwt_identity()['id']).first()
+    company = Company.query.filter_by(user_id=get_jwt_identity()).first()
     
     if company.status != 'approved':
         return jsonify({"error": "Your account is not approved by the Admin yet!"}), 403
@@ -48,7 +48,7 @@ def create_drive():
 @company_bp.route('/drives', methods=['GET'])
 @company_required()
 def get_my_drives():
-    company = Company.query.filter_by(user_id=get_jwt_identity()['id']).first()
+    company = Company.query.filter_by(user_id=get_jwt_identity()).first()
     drives = Drive.query.filter_by(company_id=company.id).all()
     
     drives_list = []
@@ -68,7 +68,7 @@ def get_my_drives():
 @company_bp.route('/drives/<int:drive_id>/close', methods=['PUT'])
 @company_required()
 def close_drive(drive_id):
-    company = Company.query.filter_by(user_id=get_jwt_identity()['id']).first()
+    company = Company.query.filter_by(user_id=get_jwt_identity()).first()
     drive = Drive.query.filter_by(id=drive_id, company_id=company.id).first()
     
     if not drive:
@@ -86,7 +86,7 @@ def close_drive(drive_id):
 @company_bp.route('/drives/<int:drive_id>/applications', methods=['GET'])
 @company_required()
 def get_drive_applications(drive_id):
-    company = Company.query.filter_by(user_id=get_jwt_identity()['id']).first()
+    company = Company.query.filter_by(user_id=get_jwt_identity()).first()
     drive = Drive.query.filter_by(id=drive_id, company_id=company.id).first()
     if not drive:
         return jsonify({"error": "Drive not found!"}), 404
@@ -117,7 +117,7 @@ def update_application_status(application_id, action):
     if action not in allowed_actions:
         return jsonify({"error": "Invalid action!"}), 400
         
-    company = Company.query.filter_by(user_id=get_jwt_identity()['id']).first()
+    company = Company.query.filter_by(user_id=get_jwt_identity()).first()
     application = Application.query.get(application_id)
     
     if not application or application.drive.company_id != company.id:
@@ -143,7 +143,9 @@ def update_application_status(application_id, action):
 @company_bp.route('/export', methods=['POST'])
 @company_required()
 def trigger_export():
-    company = Company.query.filter_by(user_id=get_jwt_identity()['id']).first()
+    from tasks import export_company_csv
+
+    company = Company.query.filter_by(user_id=get_jwt_identity()).first()
     task = export_company_csv.delay(company.id)
     return jsonify({"message": "Export started in the background!", "task_id": task.id}), 202
 
@@ -151,6 +153,8 @@ def trigger_export():
 @company_bp.route('/export/status/<string:task_id>', methods=['GET'])
 @company_required()
 def check_export_status(task_id):
+    from tasks import celery
+    
     task = celery.AsyncResult(task_id)
     if task.state == 'SUCCESS':
         return jsonify({"status": "Completed", "file": task.result}), 200

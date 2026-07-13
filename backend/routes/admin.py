@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
 from models import db, Company, Drive
 from utils import admin_required
-from tasks import export_applications_csv
+#from tasks import export_applications_csv
 from models import db, Company, Drive, Student, Application, User
 from cache import cache
 
@@ -32,8 +32,8 @@ def search_companies():
     # Grab the search query from the URL (default is empty string)
     search_query = request.args.get('q', '') 
     
-    # Search the database!
     companies = Company.query.filter(
+        Company.status == 'approved',
         db.or_(
             Company.company_name.ilike(f'%{search_query}%')
         )
@@ -43,11 +43,10 @@ def search_companies():
     for comp in companies:
         result.append({
             "id": comp.id,
-            "user_id": comp.user_id, # We need this for blacklisting!
+            "user_id": comp.user_id, 
             "company_name": comp.company_name,
-            "industry": comp.industry,
             "status": comp.status,
-            "is_blacklisted": comp.user.is_blacklisted # Magic thread to User table
+            "is_blacklisted": comp.user.is_blacklisted 
         })
         
     return jsonify(result), 200
@@ -73,7 +72,6 @@ def search_students():
             "user_id": student.user_id, # We need this for blacklisting!
             "name": student.name,
             "cgpa": student.cgpa,
-            "contact": student.contact,
             "is_blacklisted": student.user.is_blacklisted
         })
         
@@ -179,6 +177,8 @@ def handle_drive(drive_id, action):
 @admin_bp.route('/drives/<int:drive_id>/export', methods=['POST'])
 @admin_required()
 def trigger_csv_export(drive_id):
+    from tasks import export_applications_csv
+
     if not Drive.query.get(drive_id):
         return jsonify({"error": "Drive not found!"}), 404
     task = export_applications_csv.delay(drive_id)

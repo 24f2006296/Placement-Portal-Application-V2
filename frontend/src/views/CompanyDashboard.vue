@@ -3,23 +3,20 @@
   <div class="container py-5">
     
     <div class="d-flex justify-content-between align-items-center mb-5">
-      <h2 class="text-white">Company Dashboard</h2>
-      <button @click="logout" class="btn btn-outline-light">Logout</button>
+      <h2>Company Dashboard</h2>
+      <button @click="logout" class="btn btn-danger">Logout</button>
     </div>
 
-    <div class="row">
-      <!-- LEFT COLUMN: Create and View Drives -->
-      <div class="col-md-5 mb-4">
-        
-        <!-- Create Drive Form -->
-        <div class="glass-card mb-4">
-          <h4 class="mb-3 text-info">Post Detailed Job</h4>
+    <div class="row mb-4">
+      
+      <div class="col-md-6 mb-3">
+        <div class="glass-card h-100">
+          <h4 class="text-info">Post Detailed Job</h4>
           <form @submit.prevent="createDrive">
             <input type="text" placeholder="Job Title" class="form-control glass-input mb-2" v-model="newDrive.title" required>
             <input type="text" placeholder="Package (e.g., 10 LPA)" class="form-control glass-input mb-2" v-model="newDrive.package" required>
             <input type="number" step="0.1" placeholder="Minimum CGPA" class="form-control glass-input mb-2" v-model="newDrive.eligibility_cgpa" required>
             
-            <!-- New Detailed Fields -->
             <input type="text" placeholder="Skills (e.g., VueJS, Python)" class="form-control glass-input mb-2" v-model="newDrive.skills">
             <input type="text" placeholder="Experience (e.g., Fresher)" class="form-control glass-input mb-2" v-model="newDrive.experience">
             <input type="text" placeholder="Benefits (e.g., WFH, Health)" class="form-control glass-input mb-2" v-model="newDrive.benefits">
@@ -30,11 +27,14 @@
             <button type="submit" class="btn btn-glass-primary w-100">Create Drive</button>
           </form>
         </div>
+      </div>
 
-        <!-- List of Created Drives -->
-        <div class="glass-card h-100">
-          <h4 class="mb-3 text-white">My Drives</h4>
-          <button @click="triggerExport" class="btn btn-outline-info btn-sm">Export to CSV</button>
+      <div class="col-md-6 mb-3">
+        <div class="glass-card h-100" style="overflow-y: auto; max-height: 600px;">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4>My Drives</h4>
+            <button @click="triggerExport" class="btn btn-outline-info btn-sm">Export to CSV</button>
+          </div>
           <div v-if="drives.length === 0" class="text-muted">No drives posted yet.</div>
           
           <div v-for="drive in drives" :key="drive.id" class="glass-card mb-3 p-3">
@@ -49,7 +49,6 @@
               <button @click="viewApplications(drive.id, drive.title)" class="btn btn-sm btn-outline-info">View Applicants</button>
             </div>
             
-            <!-- Close Job Button -->
             <button v-if="drive.status === 'approved' && !drive.is_closed" @click="closeJobPosting(drive.id)" class="btn btn-sm btn-outline-danger w-100 mt-2">
               Close Job Posting
             </button>
@@ -57,71 +56,68 @@
         </div>
       </div>
 
-      <!-- RIGHT COLUMN: Manage Applications -->
-      <div class="col-md-7 mb-4">
-        <div class="glass-card h-100">
+    </div>
+
+    <div class="row">
+      <div class="col-12">
+        <div class="glass-card">
           
           <div v-if="selectedDriveTitle">
             <h4 class="mb-4 text-warning">Applicants for: {{ selectedDriveTitle }}</h4>
             <div v-if="applications.length === 0" class="text-muted text-center">No applications yet.</div>
 
-            <div v-for="app in applications" :key="app.application_id" class="glass-card mb-3 p-3">
-              <div class="d-flex justify-content-between align-items-start">
-                
-                <!-- Student Details -->
-                <div>
-                  <h5 class="mb-1">{{ app.student_name }}</h5>
-                  <p class="mb-1 text-muted small">CGPA: {{ app.student_cgpa }}</p>
-                  
-                  <!-- Show Resume if it exists -->
-                  <a v-if="app.resume_link" :href="app.resume_link" target="_blank" class="badge bg-primary text-decoration-none mb-2 d-inline-block">View Resume</a>
-                  <span v-else class="badge bg-secondary mb-2">No Resume</span>
-
-                  <p class="mb-1">Status: <strong class="text-white">{{ app.status }}</strong></p>
-                  
-                  <!-- Show existing Feedback/Interview Date -->
-                  <p v-if="app.interview_date" class="mb-0 text-info small">Interview: {{ app.interview_date }}</p>
-                  <p v-if="app.feedback" class="mb-0 text-warning small">Feedback: {{ app.feedback }}</p>
-                </div>
-                
-
-                <!-- Action Buttons (Only show if not rejected or placed) -->
-                <div v-if="app.status !== 'rejected' && app.status !== 'placed'" class="text-end">
-                  
-                  <div v-if="activeActionAppId !== app.application_id" class="d-flex flex-wrap gap-2 justify-content-end">
-                    <button v-if="app.status === 'applied'" @click="openActionPanel(app.application_id, 'shortlisted')" class="btn btn-warning btn-sm">Shortlist</button>
-                    <button v-if="app.status === 'shortlisted'" @click="openActionPanel(app.application_id, 'interview')" class="btn btn-info btn-sm">Schedule Interview</button>
-                    <button v-if="app.status === 'interview'" @click="openActionPanel(app.application_id, 'offer')" class="btn btn-primary btn-sm">Send Offer</button>
-                    <button v-if="app.status === 'offer'" @click="updateStatus(app.application_id, 'placed')" class="btn btn-success btn-sm">Mark Placed</button>
+            <div class="d-flex flex-wrap gap-3">
+                <div v-for="app in applications" :key="app.application_id" class="glass-card p-3 flex-grow-1" style="min-width: 300px;">
+                  <div class="d-flex justify-content-between align-items-start">
                     
-                    <button @click="openActionPanel(app.application_id, 'rejected')" class="btn btn-danger btn-sm">Reject</button>
-                  </div>
+                    <div>
+                      <h5 class="mb-1">{{ app.student_name }}</h5>
+                      <p class="mb-1 text-muted small">CGPA: {{ app.student_cgpa }}</p>
+                      
+                      <a v-if="app.resume_link" :href="app.resume_link" target="_blank" class="badge bg-primary text-decoration-none mb-2 d-inline-block">View Resume</a>
+                      <span v-else class="badge bg-secondary mb-2">No Resume</span>
 
-                  <!-- The Smart Inline Action Panel -->
-                  <div v-if="activeActionAppId === app.application_id" class="glass-card p-2 mt-2 text-start" style="background: rgba(0,0,0,0.4);">
-                    <div v-if="pendingAction === 'shortlisted' || pendingAction === 'interview'">
-                      <label class="small text-muted">Schedule Interview</label>
-                      <input type="datetime-local" class="form-control form-control-sm mb-2" v-model="actionData.interview_date">
+                      <p class="mb-1">Status: <strong>{{ app.status }}</strong></p>
+                      
+                      <p v-if="app.interview_date" class="mb-0 text-info small">Interview: {{ app.interview_date }}</p>
+                      <p v-if="app.feedback" class="mb-0 text-warning small">Feedback: {{ app.feedback }}</p>
                     </div>
-                    <div v-if="pendingAction === 'rejected'">
-                      <label class="small text-muted">Rejection Feedback</label>
-                      <input type="text" class="form-control form-control-sm mb-2" placeholder="Reason..." v-model="actionData.feedback">
-                    </div>
-                    <div class="d-flex gap-1">
-                      <button @click="submitAction(app.application_id)" class="btn btn-success btn-sm w-50">Confirm</button>
-                      <button @click="cancelAction" class="btn btn-secondary btn-sm w-50">Cancel</button>
+                    
+
+                    <div v-if="app.status !== 'rejected' && app.status !== 'placed'" class="text-end">
+                      <div v-if="activeActionAppId !== app.application_id" class="d-flex flex-wrap gap-2 justify-content-end">
+                        <button v-if="app.status === 'applied'" @click="openActionPanel(app.application_id, 'shortlisted')" class="btn btn-warning btn-sm">Shortlist</button>
+                        <button v-if="app.status === 'shortlisted'" @click="openActionPanel(app.application_id, 'interview')" class="btn btn-info btn-sm">Schedule</button>
+                        <button v-if="app.status === 'interview'" @click="openActionPanel(app.application_id, 'offer')" class="btn btn-primary btn-sm">Offer</button>
+                        <button v-if="app.status === 'offer'" @click="updateStatus(app.application_id, 'placed')" class="btn btn-success btn-sm">Placed</button>
+                        <button @click="openActionPanel(app.application_id, 'rejected')" class="btn btn-danger btn-sm">Reject</button>
+                      </div>
+
+                      <div v-if="activeActionAppId === app.application_id" class="glass-card p-2 mt-2 text-start" style="background: rgba(0,0,0,0.4);">
+                        <div v-if="pendingAction === 'shortlisted' || pendingAction === 'interview'">
+                          <label class="small text-white">Schedule Interview</label>
+                          <input type="datetime-local" class="form-control form-control-sm mb-2" v-model="actionData.interview_date">
+                        </div>
+                        <div v-if="pendingAction === 'rejected'">
+                          <label class="small text-white">Rejection Feedback</label>
+                          <input type="text" class="form-control form-control-sm mb-2" placeholder="Reason..." v-model="actionData.feedback">
+                        </div>
+                        <div class="d-flex gap-1">
+                          <button @click="submitAction(app.application_id)" class="btn btn-success btn-sm w-50">Confirm</button>
+                          <button @click="cancelAction" class="btn btn-secondary btn-sm w-50">Cancel</button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
             </div>
-
           </div>
-          <div v-else class="text-center text-muted mt-5">
+          
+          <div v-else class="text-center text-muted py-5">
             <p>Click "View Applicants" on a drive to see the students.</p>
           </div>
-
-        </div>
+        
+        </div>  
       </div>
     </div>
   </div>
