@@ -32,15 +32,15 @@ export default {
           password: this.password
         });
         
-        // Grab ONLY the clean ticket!
+        
         const cleanToken = response.data.token || response.data.access_token;
         const userRole = response.data.role;
 
-        // Save the clean ticket to memory
+        
         localStorage.setItem('token', cleanToken);
         localStorage.setItem('role', userRole);
 
-        // Send the user to the right page
+        
         if (userRole === 'admin') {
           this.$router.push('/admin');
         } else if (userRole === 'company') {

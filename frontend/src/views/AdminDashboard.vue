@@ -1,4 +1,4 @@
-<!-- frontend/src/views/AdminDashboard.vue -->
+
 <template>
   <div class="container py-5">
     
@@ -61,7 +61,7 @@
         </div>
       </div>
 
-      <!-- Search Students (UPGRADED WITH VIEW HISTORY BUTTON) -->
+      <!-- Search Students -->
       <div class="col-md-6 mb-4">
         <div class="glass-card h-100">
           <h4 class="mb-3">Manage Students</h4>
@@ -79,7 +79,6 @@
               </small>
             </div>
             <div>
-              <!-- NEW: View History Button -->
               <button @click="viewStudentHistory(student.id)" class="btn btn-sm btn-info me-2">History</button>
               
               <button @click="toggleBlacklist(student.user_id)" :class="student.is_blacklisted ? 'btn btn-sm btn-success' : 'btn btn-sm btn-danger'">
@@ -142,9 +141,9 @@
     </div>
 
 
-    <!-- ========================================== -->
-    <!-- NEW: STUDENT HISTORY MODAL OVERLAY -->
-    <!-- ========================================== -->
+    
+    <!--  STUDENT HISTORY MODAL OVERLAY -->
+    
     <div v-if="showHistoryModal && selectedStudentHistory" class="custom-modal-overlay d-flex justify-content-center align-items-center">
       <div class="glass-card w-100 m-3" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
         
@@ -210,7 +209,7 @@ export default {
       pendingDrives: [],
       approvedDrives: [],
       
-      // NEW: Modal State
+      
       showHistoryModal: false,
       selectedStudentHistory: null
     }
@@ -259,12 +258,12 @@ export default {
       } catch (error) { alert("Failed to change blacklist status."); }
     },
 
-    //View Student History 
+     
     async viewStudentHistory(studentId) {
       try {
         const response = await api.get(`/admin/students/${studentId}/history`);
         this.selectedStudentHistory = response.data;
-        this.showHistoryModal = true; // Opens the modal!
+        this.showHistoryModal = true; 
       } catch (error) {
         alert("Failed to fetch student history.");
       }
@@ -287,8 +286,29 @@ export default {
     },
 
     async triggerCSVExport(driveId) {
-      const response = await api.post(`/admin/drives/${driveId}/export`);
-      alert(`Success! Task ID: ${response.data.task_id}`);
+      try {
+        // Celery job start 
+        const response = await api.post(`/admin/drives/${driveId}/export`);
+        const taskId = response.data.task_id;
+        alert("Batch job started! Admin Report is generating. Please wait...");
+
+        // 2. Wait & check status every 3 second 
+        const interval = setInterval(async () => {
+          const statusRes = await api.get(`/admin/export/status/${taskId}`);
+          
+          if (statusRes.data.status === 'Completed') {
+            clearInterval(interval); // stop Checking 
+            
+            // Auto-DOWNLOAD 
+            alert("Export successful! Your Admin Report is downloading...");
+            
+            const fileUrl = 'http://127.0.0.1:5000/api/admin/download/' + statusRes.data.file;
+            window.location.href = fileUrl; 
+          }
+        }, 3000); // 3000 = 3 seconds
+      } catch (error) {
+        alert("Failed to start export. Please try again.");
+      }
     },
 
     logout() { localStorage.clear(); this.$router.push('/'); }
@@ -304,8 +324,8 @@ export default {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.7); /* Dark semi-transparent background */
-  z-index: 9999; /* Ensures it sits on top of EVERYTHING */
-  backdrop-filter: blur(5px); /* Adds a nice blur to the background */
+  background: rgba(0, 0, 0, 0.7); 
+  z-index: 9999; 
+  backdrop-filter: blur(5px); 
 }
 </style>

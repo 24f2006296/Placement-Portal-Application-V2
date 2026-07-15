@@ -17,13 +17,11 @@ celery = make_celery(flask_app)
 def send_monthly_reports():
     print("Starting monthly report generation...")
     
-    # 1. Get all approved companies
     approved_companies = Company.query.filter_by(status='approved').all()
     reports_sent = 0
-    current_month = datetime.utcnow().strftime("%B %Y") # e.g., "August 2026"
+    current_month = datetime.utcnow().strftime("%B %Y") # like, "August 2026"
     
     for company in approved_companies:
-        # 2. Calculate Statistics
         drives = Drive.query.filter_by(company_id=company.id).all()
         total_drives = len(drives)
         
@@ -38,7 +36,7 @@ def send_monthly_reports():
         total_interviews = len([a for a in applications if a.status in ['interview', 'offer', 'placed']])
         total_placed = len([a for a in applications if a.status == 'placed'])
         
-        # 3. Create the HTML Report
+        # Create the HTML Report
         html_content = f"""
         <html>
             <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
@@ -77,7 +75,7 @@ def send_monthly_reports():
         </html>
         """
         
-        # 4. Send Email
+        # Send Email
         company_email = company.user.email
         subject = f"Your Monthly Hiring Report - {current_month}"
         
@@ -93,7 +91,7 @@ def send_email(to_email, subject, body, is_html=False):
     sender = flask_app.config.get('SENDER_EMAIL')
     password = flask_app.config.get('SENDER_PASSWORD')
     
-    # If testing without credentials
+    # If testing without credentials [Mock Mails]
     if sender == "your_email@gmail.com":
         print(f"\n[MOCK EMAIL to {to_email}]")
         print(f"Subject: {subject}")

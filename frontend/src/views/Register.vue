@@ -1,4 +1,4 @@
-<!-- frontend/src/views/Register.vue -->
+
 <template>
   <div class="container d-flex justify-content-center align-items-center" style="min-height: 100vh;">
     
@@ -52,7 +52,6 @@
       </form>
       
       <div class="text-center mt-4">
-        <!-- router-link lets us navigate without reloading the page -->
         <small>Already have an account? <router-link to="/" class="text-info">Login here</router-link></small>
       </div>
     </div>
@@ -67,11 +66,10 @@ export default {
   name: 'Register',
   data() {
     return {
-      // We group everything inside a 'form' object to keep it tidy
       form: {
         email: '',
         password: '',
-        role: 'student', // Default selection
+        role: 'student', 
         name: '',
         cgpa: '',
         company_name: ''
@@ -81,11 +79,9 @@ export default {
   methods: {
     async handleRegister() {
       try {
-        // Send the data to our Flask backend
         const response = await api.post('/auth/register', this.form);
         alert(response.data.message + " You can now login.");
         
-        // Send them back to the login page
         this.$router.push('/');
       } catch (error) {
         const errorMsg = error.response?.data?.error || "Registration failed!";

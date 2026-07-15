@@ -1,10 +1,9 @@
 
-
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, send_file
 from flask_jwt_extended import get_jwt_identity
 from models import db, Student, Drive, Application
 from utils import student_required
-from datetime import datetime # <-- Needed to check deadlines!
+from datetime import datetime 
 from cache import cache
 
 student_bp = Blueprint('student', __name__)
@@ -21,7 +20,6 @@ def handle_profile():
         return jsonify({
             "name": student.name,
             "cgpa": student.cgpa,
-            #"contact": student.contact,
             "education": student.education,
             "skills": student.skills,
             "experience": student.experience,
@@ -32,7 +30,6 @@ def handle_profile():
     data = request.get_json()
     student.name = data.get('name', student.name)
     student.cgpa = data.get('cgpa', student.cgpa)
-    #student.contact = data.get('contact', student.contact)
     student.education = data.get('education', student.education)
     student.skills = data.get('skills', student.skills)
     student.experience = data.get('experience', student.experience)
@@ -45,17 +42,13 @@ def handle_profile():
 #  Smart Job Board (Hides closed/expired & Allows Search) ---
 @student_bp.route('/drives', methods=['GET'])
 @student_required()
-@cache.cached(timeout=120, query_string=True) # Expiry Policy: 120 seconds
+@cache.cached(timeout=120, query_string=True) 
 def get_available_drives():
-    # 1. Grab the search word if they typed one
     search_query = request.args.get('q', '')
     
-    # 2. Base filter: Must be approved and NOT manually closed by the company
     query = Drive.query.filter_by(status='approved', is_closed=False)
     
-    # 3. Search filter: By Title, Skills, or Company Name
     if search_query:
-        # To search by company name, we have to join the Company table
         from models import Company 
         query = query.join(Company).filter(
             db.or_(
@@ -70,7 +63,7 @@ def get_available_drives():
     
     drives_list = []
     for drive in drives:
-        # 4. TIME CHECK: If there is a deadline AND it has already passed, skip this job!
+        # CHECK: If there is a deadline AND it has already passed, skip this job!
         if drive.deadline and drive.deadline < current_time:
             continue
             
@@ -96,7 +89,6 @@ def apply_for_job(drive_id):
     student = Student.query.filter_by(user_id=get_jwt_identity()).first()
     drive = Drive.query.get(drive_id)
     
-    # Extra security: Ensure job isn't closed or expired right when they click apply!
     if not drive or drive.status != 'approved' or drive.is_closed:
         return jsonify({"error": "Drive is not available!"}), 404
     if drive.deadline and drive.deadline < datetime.utcnow():
@@ -125,6 +117,7 @@ def get_my_applications():
     for app in applications:
         app_list.append({
             "application_id": app.id,
+            "drive_id": app.drive_id,
             "company_name": app.drive.company.company_name,
             "job_title": app.drive.title,
             "status": app.status,
@@ -156,3 +149,11 @@ def check_export_status(task_id):
     if task.state == 'SUCCESS':
         return jsonify({"status": "Completed", "file": task.result}), 200
     return jsonify({"status": task.state}), 200
+
+# Csv export file download Route
+@student_bp.route('/download/<path:filepath>', methods=['GET'])
+def download_csv(filepath):
+    try:
+        return send_file(filepath, as_attachment=True)
+    except Exception as e:
+        return jsonify({"error": "File not found!"}), 404

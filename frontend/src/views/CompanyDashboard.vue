@@ -1,4 +1,4 @@
-<!-- frontend/src/views/CompanyDashboard.vue -->
+
 <template>
   <div class="container py-5">
     
@@ -89,7 +89,7 @@
                         <button v-if="app.status === 'applied'" @click="openActionPanel(app.application_id, 'shortlisted')" class="btn btn-warning btn-sm">Shortlist</button>
                         <button v-if="app.status === 'shortlisted'" @click="openActionPanel(app.application_id, 'interview')" class="btn btn-info btn-sm">Schedule</button>
                         <button v-if="app.status === 'interview'" @click="openActionPanel(app.application_id, 'offer')" class="btn btn-primary btn-sm">Offer</button>
-                        <button v-if="app.status === 'offer'" @click="updateStatus(app.application_id, 'placed')" class="btn btn-success btn-sm">Placed</button>
+                        <button v-if="app.status === 'offer'" @click="openActionPanel(app.application_id, 'placed')" class="btn btn-success btn-sm">Placed</button>
                         <button @click="openActionPanel(app.application_id, 'rejected')" class="btn btn-danger btn-sm">Reject</button>
                       </div>
 
@@ -101,6 +101,10 @@
                         <div v-if="pendingAction === 'rejected'">
                           <label class="small text-white">Rejection Feedback</label>
                           <input type="text" class="form-control form-control-sm mb-2" placeholder="Reason..." v-model="actionData.feedback">
+                        </div>
+                        <div v-if="pendingAction === 'placed'">
+                          <label class="small text-white">Offer Letter Link (Google Drive)</label>
+                          <input type="text" class="form-control form-control-sm mb-2" placeholder="Paste link here..." v-model="actionData.offer_letter">
                         </div>
                         <div class="d-flex gap-1">
                           <button @click="submitAction(app.application_id)" class="btn btn-success btn-sm w-50">Confirm</button>
@@ -139,7 +143,7 @@ export default {
       selectedDriveId: null,
       selectedDriveTitle: '',
       
-      // Smart Action Panel State
+      
       activeActionAppId: null,
       pendingAction: '',
       actionData: {
@@ -171,7 +175,7 @@ export default {
       if (confirm("Are you sure you want to close this job posting? Students will no longer be able to apply.")) {
         try {
           await api.put(`/company/drives/${driveId}/close`);
-          this.fetchMyDrives(); // Refresh the list
+          this.fetchMyDrives(); 
         } catch (error) {
           alert("Failed to close job posting.");
         }
@@ -181,15 +185,15 @@ export default {
     async viewApplications(id, title) {
       this.selectedDriveId = id;
       this.selectedDriveTitle = title;
-      this.cancelAction(); // Reset any open panels
+      this.cancelAction(); 
       this.applications = (await api.get(`/company/drives/${id}/applications`)).data;
     },
 
-    // Opens the Smart Action Panel for a specific student
+    
     openActionPanel(appId, actionType) {
       this.activeActionAppId = appId;
       this.pendingAction = actionType;
-      this.actionData = { feedback: '', interview_date: '' }; // Clear old data
+      this.actionData = { feedback: '', interview_date: '' }; 
     },
 
     cancelAction() {
@@ -199,18 +203,24 @@ export default {
 
     async triggerExport() {
       try {
-        // 1. Tell Celery to start the job
+        // Tell Celery to start the job
         const res = await api.post('/company/export');
         const taskId = res.data.task_id;
         alert("Batch job started! You can continue using the dashboard. We will notify you when it's done.");
 
-        // 2. Secretly check the status every 3 seconds
+        // Secretly check the status every 3 seconds
         const interval = setInterval(async () => {
           const statusRes = await api.get(`/company/export/status/${taskId}`);
           
           if (statusRes.data.status === 'Completed') {
             clearInterval(interval); // Stop checking
-            alert(`Batch Job Complete! Your CSV is ready and saved at: ${statusRes.data.file}`);
+            alert("Export successful! Your file is downloading...");
+            
+            // Backend ka download link banao 
+            const fileUrl = 'http://127.0.0.1:5000/api/company/download/' + statusRes.data.file;
+            
+            // Browser automatically download the file 
+            window.location.href = fileUrl;
           }
         }, 3000);
       } catch (error) {
@@ -218,13 +228,13 @@ export default {
       }
     },
 
-    // Submits the data from the Smart Action Panel
+    
     async submitAction(appId) {
       await this.updateStatus(appId, this.pendingAction, this.actionData);
       this.cancelAction();
     },
 
-    // The core API call that sends the status, feedback, and interview date
+    
     async updateStatus(appId, action, extraData = {}) {
       try {
         await api.put(`/company/applications/${appId}/${action}`, extraData);

@@ -1,20 +1,18 @@
 body {
     margin: 0;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    /* Premium Off-White Background */
     background: linear-gradient(#F5F5DC);
     background-attachment: fixed;
-    color: #2c3e50; /* Dark text everywhere */
+    color: #2c3e50; 
     min-height: 100vh;
 }
 
-/* Make headings strictly dark so they don't disappear */
+
 h1, h2, h3, h4, h5, h6 {
     color: #1a252f !important;
 }
 
 .glass-card {
-    /* Solid safed (white) with 60% transparency for glass effect */
     background: rgba(255, 255, 255, 0.5); 
     backdrop-filter: blur(12px); 
     -webkit-backdrop-filter: blur(12px);
@@ -22,27 +20,25 @@ h1, h2, h3, h4, h5, h6 {
     border-radius: 20px;
     box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1); 
     padding: 2rem;
-    color: #2c3e50; /* Ensure text inside card is dark */
+    color: #2c3e50; 
 }
 
-/* Yeh wo lists hain jo boxes ke andar hain (jaise Company 1, Company 2) */
+
 .glass-card .glass-card {
-    /* Halka greyish-white */
     background: rgba(240, 242, 245, 0.8);
     border: 1px solid rgba(255, 255, 255, 0.5);
     box-shadow: none;
     color: #2c3e50;
 }
 
-/* Text Inputs (Jahan hum type karte hain) */
 .glass-input {
     background: rgba(255, 255, 255, 0.7);
     border: 1px solid rgba(150, 160, 175, 0.3);
-    color: #333; /* Dark text jab type karein */
+    color: #333; 
     border-radius: 10px;
 }
 
-/* Jab input pe click karein */
+
 .glass-input:focus {
     background: rgba(255, 255, 255, 0.9);
     border-color: #3a7bd5;
@@ -54,7 +50,7 @@ h1, h2, h3, h4, h5, h6 {
 .btn-glass-primary {
     background: linear-gradient(45deg, #3a7bd5, #3a6073);
     border: none;
-    color: white !important; /* Button ka text humesha white rahega */
+    color: white !important; 
     border-radius: 10px;
     transition: all 0.3s ease;
 }
@@ -65,42 +61,42 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 
-/* 1. Agar aapne HTML mein galti se text-white class lagayi hui hai, toh usko dark kar do */
+
 .text-white, .text-light {
     color: #2c3e50 !important; 
 }
 
-/* 2. Agar koi bhi heading (h1 se h6) ya paragraph apne aap white ho raha hai, usko dark karo */
+
 #app h1, #app h2, #app h3, #app h4, #app h5, #app h6, #app p, #app span {
     color: #1a252f !important;
 }
 
-/* 3. Logout button aur baki buttons ka text bhi fix kar dete hain */
+
 .btn {
     color: #2c3e50; 
 }
 .btn-glass-primary, .btn-danger, .btn-info {
-    color: white !important; /* Sirf main colored buttons white rahenge */
+    color: white !important; 
 }
 
 
 .btn-my-glass {
-    /* 1. Aapka idea: 40% white aur 60% transparent background */
+
     background: rgba(255, 255, 255, 0.4); 
     
-    /* 2. Aapka doosra idea: Border ko thoda mota (2px) aur halke white rang ka banana */
+    
     border: 2px solid rgba(255, 255, 255, 0.7); 
     
-    color: #2c3e50 !important; /* Text ko dark rakhenge taaki padhne mein aaye */
+    color: #2c3e50 !important; 
     backdrop-filter: blur(8px);
     border-radius: 12px;
     font-weight: 600;
     transition: all 0.2s ease;
 }
 
-/* Jab mouse button ke upar jaye (Hover effect) */
+/* (Hover effect) */
 .btn-my-glass:hover {
-    background: rgba(255, 255, 255, 0.6); /* Halka sa aur chamke */
-    border-color: rgba(255, 255, 255, 0.9); /* Border bhi thodi aur safed ho jaye */
-    transform: translateY(-1px); /* Halka sa upar uthe */
+    background: rgba(255, 255, 255, 0.6); 
+    border-color: rgba(255, 255, 255, 0.9);
+    transform: translateY(-1px); 
 }

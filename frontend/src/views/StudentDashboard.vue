@@ -23,7 +23,7 @@
 
     <div v-if="activeTab === 'jobs'">
       
-      <!-- Smart Search Bar -->
+      
       <div class="glass-card mb-4 p-3 d-flex gap-2">
         <input type="text" class="form-control glass-input" placeholder="Search by Company, Job Title, or Skills..." v-model="searchQuery" @keyup.enter="fetchDrives">
         <button class="btn btn-info px-4" @click="fetchDrives">Search</button>
@@ -50,7 +50,13 @@
               <p class="mb-0 text-danger mt-2" v-if="drive.deadline"><i class="text-muted">Deadline:</i> <strong>{{ drive.deadline }}</strong></p>
             </div>
             
-            <button @click="applyForJob(drive.id)" class="btn btn-glass-primary mt-auto w-100">Apply Now</button>
+            <button v-if="hasApplied(drive.id)" class="btn btn-secondary btn-sm" disabled>
+              ✅ Already Applied
+            </button>
+
+            <button v-else @click="applyForJob(drive.id)" class="btn btn-primary btn-sm">
+              Apply Now
+            </button>
           </div>
         </div>
       </div>
@@ -95,10 +101,10 @@
             
             <!-- Offer Letter Download -->
             <div class="col-md-3 text-end">
-              <a v-if="app.status === 'selected' && app.offer_letter" :href="app.offer_letter" target="_blank" class="btn btn-success btn-sm w-100">
+              <a v-if="app.status === 'placed' && app.offer_letter" :href="app.offer_letter" target="_blank" class="btn btn-success btn-sm w-100">
                 Download Offer Letter
               </a>
-              <button v-else-if="app.status === 'selected'" class="btn btn-outline-success btn-sm w-100" disabled>
+              <button v-else-if="app.status === 'placed'" class="btn btn-outline-success btn-sm w-100" disabled>
                 Offer Letter Pending
               </button>
             </div>
@@ -118,7 +124,6 @@
             <h4 class="mb-4 text-info">Update Profile</h4>
             
             <form @submit.prevent="updateProfile">
-              <!-- Basic Info (Readonly for Name & CGPA to prevent cheating, though real apps might allow changes) -->
               <div class="row mb-3">
                 <div class="col-md-6">
                   <label>Full Name</label>
@@ -176,7 +181,7 @@ export default {
   name: 'StudentDashboard',
   data() {
     return {
-      activeTab: 'jobs', // Default view when page loads
+      activeTab: 'jobs', 
       searchQuery: '',
       drives: [],
       applications: [],
@@ -186,7 +191,6 @@ export default {
     }
   },
   async mounted() {
-    // Fetch all data concurrently to make the page load super fast!
     await Promise.all([
       this.fetchProfile(),
       this.fetchDrives(),
@@ -194,7 +198,7 @@ export default {
     ]);
   },
   methods: {
-    // --- Data Fetching ---
+    
     async fetchProfile() {
       try {
         const res = await api.get('/student/profile');
@@ -216,7 +220,11 @@ export default {
       } catch (error) { console.error("Failed to load applications"); }
     },
 
-    // --- Actions ---
+    hasApplied(driveId) {
+    return this.applications.some(app => app.drive_id === driveId);
+    },
+
+    
     async updateProfile() {
       try {
         await api.put('/student/profile', this.profile);
@@ -228,18 +236,22 @@ export default {
 
     async triggerExport() {
       try {
-        // 1. Tell Celery to start the job
+        // Celery start the job
         const res = await api.post('/student/export');
         const taskId = res.data.task_id;
         alert("Batch job started! You can continue using the dashboard. We will notify you when it's done.");
 
-        // 2. Secretly check the status every 3 seconds
+        // check status every 3 seconds
         const interval = setInterval(async () => {
           const statusRes = await api.get(`/student/export/status/${taskId}`);
           
           if (statusRes.data.status === 'Completed') {
             clearInterval(interval); // Stop checking
-            alert(`Batch Job Complete! Your CSV is ready and saved at: ${statusRes.data.file}`);
+            alert("Export successful! Your Application History is downloading...");
+    
+            // Student cvs file download link
+            const fileUrl = 'http://127.0.0.1:5000/api/student/download/' + statusRes.data.file;
+            window.location.href = fileUrl;
           }
         }, 3000);
       } catch (error) {
@@ -251,7 +263,6 @@ export default {
       try {
         await api.post(`/student/drives/${id}/apply`);
         alert("Success! Applied for the job.");
-        // Refresh the applications list so it shows up in TAB "MY APPLICATIONS" instantly!
         await this.fetchApplications();
       } catch (error) {
         alert("Oops! " + (error.response?.data?.error || "Failed to apply."));

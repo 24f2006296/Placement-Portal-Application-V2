@@ -1,16 +1,14 @@
-# backend/create_admin.py
 
 from app import create_app
 from models import db, User
 from werkzeug.security import generate_password_hash
 
 def create_super_admin():
-    # 1. Create a mini-version of our Flask app
+    # Create a mini-version of our Flask app
     app = create_app()
     
-    # 2. Enter the app context (Opening the door to the Database)
+   
     with app.app_context():
-        # Check if an admin already exists to prevent duplicates
         existing_admin = User.query.filter_by(email="admin@sanjivni.com").first()
         
         if existing_admin:

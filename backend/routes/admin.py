@@ -1,7 +1,6 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, send_file
 from models import db, Company, Drive
 from utils import admin_required
-#from tasks import export_applications_csv
 from models import db, Company, Drive, Student, Application, User
 from cache import cache
 
@@ -10,7 +9,6 @@ admin_bp = Blueprint('admin', __name__)
 @admin_bp.route('/stats', methods=['GET'])
 @admin_required()
 def get_dashboard_stats():
-    # Let the database do the math quickly!
     total_students = Student.query.count()
     total_companies = Company.query.count()
     total_drives = Drive.query.count()
@@ -29,7 +27,6 @@ def get_dashboard_stats():
 @admin_required()
 @cache.cached(timeout=120, query_string=True) # Expiry Policy: 120 seconds
 def search_companies():
-    # Grab the search query from the URL (default is empty string)
     search_query = request.args.get('q', '') 
     
     companies = Company.query.filter(
@@ -52,10 +49,10 @@ def search_companies():
     return jsonify(result), 200
 
 
-# Search Students (by name)
+# Search Students
 @admin_bp.route('/students/search', methods=['GET'])
 @admin_required()
-@cache.cached(timeout=120, query_string=True) # Expiry Policy: 120 seconds
+@cache.cached(timeout=120, query_string=True) 
 def search_students():
     search_query = request.args.get('q', '')
     
@@ -69,7 +66,7 @@ def search_students():
     for student in students:
         result.append({
             "id": student.id,
-            "user_id": student.user_id, # We need this for blacklisting!
+            "user_id": student.user_id, # need this for blacklisting!
             "name": student.name,
             "cgpa": student.cgpa,
             "is_blacklisted": student.user.is_blacklisted
@@ -90,7 +87,7 @@ def toggle_blacklist(user_id):
     user.is_blacklisted = not user.is_blacklisted
     db.session.commit()
 
-    # REFRESH POLICY: Clear the Redis cache instantly so searches reflect the ban!
+    # Refresh: Clear the Redis cache instantly so searches reflect the ban!
     cache.clear()
     
     action = "Blacklisted" if user.is_blacklisted else "Un-blacklisted"
@@ -115,7 +112,7 @@ def handle_company(company_id, action):
     return jsonify({"message": f"Company {company.status}!"}), 200
 
 
-# View a student's full profile and application history
+# student's full profile and application history
 @admin_bp.route('/students/<int:student_id>/history', methods=['GET'])
 @admin_required()
 def get_student_history(student_id):
@@ -123,7 +120,6 @@ def get_student_history(student_id):
     if not student:
         return jsonify({"error": "Student not found!"}), 404
         
-    # Get all applications for this student
     applications = Application.query.filter_by(student_id=student.id).all()
     
     app_history = []
@@ -170,7 +166,6 @@ def handle_drive(drive_id, action):
         return jsonify({"error": "Invalid request!"}), 400
     drive.status = 'approved' if action == 'approve' else 'rejected'
     db.session.commit()
-    # REFRESH POLICY: Clear the cache so students can see the newly approved job!
     cache.clear()
     return jsonify({"message": f"Drive {drive.status}!"}), 200
 
@@ -184,3 +179,22 @@ def trigger_csv_export(drive_id):
     task = export_applications_csv.delay(drive_id)
     return jsonify({"message": "CSV export has started!", "task_id": task.id}), 202
 
+# Check Export Task Status
+@admin_bp.route('/export/status/<string:task_id>', methods=['GET'])
+@admin_required()
+def check_export_status(task_id):
+    from tasks import celery
+    
+    task = celery.AsyncResult(task_id)
+    if task.state == 'SUCCESS':
+        return jsonify({"status": "Completed", "file": task.result}), 200
+        
+    return jsonify({"status": task.state}), 200
+
+#csv export file downloading route
+@admin_bp.route('/download/<path:filepath>', methods=['GET'])
+def download_csv(filepath):
+    try:
+        return send_file(filepath, as_attachment=True)
+    except Exception as e:
+        return jsonify({"error": "File not found!"}), 404

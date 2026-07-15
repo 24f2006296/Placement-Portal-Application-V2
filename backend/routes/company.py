@@ -1,10 +1,9 @@
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, send_file
 from flask_jwt_extended import get_jwt_identity
 from models import db, Company, Drive, Application
 from utils import company_required
 from datetime import datetime
-#from tasks import export_company_csv, celery
 from cache import cache
 
 company_bp = Blueprint('company', __name__)
@@ -19,11 +18,9 @@ def create_drive():
     if company.status != 'approved':
         return jsonify({"error": "Your account is not approved by the Admin yet!"}), 403
         
-    # Convert string deadline to Python DateTime object
     deadline_obj = None
     if data.get('deadline'):
         try:
-            # HTML datetime-local inputs send data in this format: YYYY-MM-DDTHH:MM
             deadline_obj = datetime.strptime(data.get('deadline'), '%Y-%m-%dT%H:%M')
         except ValueError:
             return jsonify({"error": "Invalid date format!"}), 400
@@ -58,13 +55,13 @@ def get_my_drives():
             "title": drive.title,
             "package": drive.package,
             "status": drive.status,
-            "is_closed": drive.is_closed, # Tell frontend if it's closed
+            "is_closed": drive.is_closed, 
             "deadline": drive.deadline.strftime('%Y-%m-%d %H:%M') if drive.deadline else None
         })
     return jsonify(drives_list), 200
 
 
-# TO manually Close a Job Posting 
+# For manually Close a Job Posting 
 @company_bp.route('/drives/<int:drive_id>/close', methods=['PUT'])
 @company_required()
 def close_drive(drive_id):
@@ -76,7 +73,6 @@ def close_drive(drive_id):
         
     drive.is_closed = True
     db.session.commit()
-    # REFRESH POLICY: Instantly wipe the cache so students don't see this closed job!
     cache.clear()
 
     return jsonify({"message": "Job posting has been closed!"}), 200
@@ -99,7 +95,7 @@ def get_drive_applications(drive_id):
             "application_id": app.id,
             "student_name": app.student.name,
             "student_cgpa": app.student.cgpa,
-            "resume_link": app.student.resume_link, # Give the company the resume!
+            "resume_link": app.student.resume_link, 
             "status": app.status,
             "feedback": app.feedback,
             "interview_date": app.interview_date.strftime('%Y-%m-%d %H:%M') if app.interview_date else None
@@ -111,7 +107,6 @@ def get_drive_applications(drive_id):
 @company_bp.route('/applications/<int:application_id>/<string:action>', methods=['PUT'])
 @company_required()
 def update_application_status(application_id, action):
-    # --- UPDATED TO MATCH YOUR EXACT REQUIREMENTS ---
     allowed_actions = ['shortlisted', 'interview', 'offer', 'rejected', 'placed']
     
     if action not in allowed_actions:
@@ -129,12 +124,15 @@ def update_application_status(application_id, action):
     if data.get('feedback'):
         application.feedback = data.get('feedback')
         
-    # We can schedule an interview during the 'shortlisted' or 'interview' phase
+    # Can schedule an interview during the 'shortlisted' or 'interview' phase
     if action in ['shortlisted', 'interview'] and data.get('interview_date'):
         try:
             application.interview_date = datetime.strptime(data.get('interview_date'), '%Y-%m-%dT%H:%M')
         except ValueError:
             return jsonify({"error": "Invalid interview date format!"}), 400
+        
+    if action == 'placed' and data.get('offer_letter'):
+        application.offer_letter = data.get('offer_letter')
             
     db.session.commit()
     return jsonify({"message": f"Student has been successfully updated to {action}!"}), 200
@@ -159,3 +157,11 @@ def check_export_status(task_id):
     if task.state == 'SUCCESS':
         return jsonify({"status": "Completed", "file": task.result}), 200
     return jsonify({"status": task.state}), 200
+
+# Route for downloading csv export files
+@company_bp.route('/download/<path:filepath>', methods=['GET'])
+def download_csv(filepath):
+    try:
+        return send_file(filepath, as_attachment=True)
+    except Exception as e:
+        return jsonify({"error": "File not found or still processing!"}), 404
